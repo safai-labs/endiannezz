@@ -20,7 +20,7 @@ impl<const N: usize> Foo<N> {
 #[endian(big)]
 struct Bar<const N: usize>  {
     value: u16,
-    foo: Foo<N>
+    foo: [Foo<N>; 2]
 }
 
 impl<const N: usize> Bar<N> {
