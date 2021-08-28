@@ -147,10 +147,7 @@ fn main() -> Result<()> {
 */
 
 use std::convert::TryInto;
-use std::fmt::Display;
 use std::io::{Error, ErrorKind, Read, Result, Write};
-use std::iter::FromIterator;
-use std::marker::PhantomData;
 use std::mem;
 use crate::private::*;
 
@@ -422,6 +419,7 @@ pub trait HardcodedPayload: Default {
     type Buf: AsRef<[u8]> + AsMut<[u8]> + Default + PartialEq;
     const PAYLOAD: Self::Buf;
 }
+
 
 impl<T: HardcodedPayload> Io for T {
     #[cfg_attr(feature = "inline_primitives", inline)]
