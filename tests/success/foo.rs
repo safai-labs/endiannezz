@@ -3,23 +3,45 @@ use std::io::Write;
 
 #[derive(Io, Copy, Clone, Debug)]
 #[endian(little)]
-struct Foo {
-    foo: [u64; 2]
+struct Foo<const N: usize> {
+    basic: [u64; N],
 }
 
-impl Foo {
-    pub fn new(value: u64) -> Self { 
+impl<const N: usize> Foo<N> {
+    pub fn new(value: u64) -> Self {
         Self {
-            foo: [0xdead, 0xbeef]
+            basic: [value; N],
         }
     }
 }
 
 
-#[test]
+#[derive(Io, Copy, Clone, Debug)]
+#[endian(big)]
+struct Bar<const N: usize>  {
+    value: u16,
+    foo: Foo<N>
+}
+
+impl<const N: usize> Bar<N> {
+    pub fn new(value: u16) -> Self {
+        Self {
+            value,
+            foo: Foo::new(value as u64)
+        }
+    }
+}
+
+
 fn generic_const() {
-    let foo: Foo = Foo::new(0x10);
+    let foo = Foo::<2_usize>::new(0xdead);
     let mut vec = Vec::<u8>::new();
     foo.write(&mut vec).unwrap();
     eprintln!("{:?}", vec);
+    let bar = Bar::<4_usize>::new(0xA);
+    eprintln!("{:?}", bar);
+}
+
+fn main() {
+    generic_const();
 }

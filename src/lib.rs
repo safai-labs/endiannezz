@@ -195,27 +195,44 @@ macro_rules! delegate {
     (@simple $ty:ty, [$($method:ident),* $(,)?], ($param:ident : $param_ty:ty) -> $ret:ty) => {
         delegate!(@inner $ty, [$($method),*], $param, $param_ty, $ret);
     };
-    (@to_array [$arr_ty:ty; $size:ident], [$($method:ident),* $(,)?], ($param:ident : $param_ty: ty) -> $ret: ty) => {
+    (@to_array [$arr_ty:ty; $count:ident], [$($method:ident),* $(,)?], ($param:ident : $param_ty: ty) -> $ret: ty) => {
         $(
             #[inline]
             fn $method(self) -> $ret {
                 const T_SIZE: usize =  mem::size_of::<$arr_ty>();
-                let x: Vec<[u8; T_SIZE]> =
+                let rv: Vec<[u8; T_SIZE]> =
                     self.iter().map(|x| {
                         let x = <$arr_ty as Primitive>::$method(*x);
                         x
-                }).collect::<Vec<[u8; T_SIZE]>>();
-                x.try_into().unwrap_or_else(|_| 
-                    panic!("this should never happen"))
-                // InternalDefault::default()
+                    }).collect::<Vec<[u8; T_SIZE]>>();
+                //
+                // NOTE: While panics and asserts have no place in a library,
+                // here this choice is appropriate,
+                // place because it's not a handle-able "normal error".
+                //
+                // This assert should never trigger. If it does
+                // something is fundamentally wrong with the library
+                // implementation
+                //
+                let rv: [[u8; T_SIZE]; $count] = rv.try_into()
+                    .unwrap_or_else(|_| panic!("BUG()! inside endiannezz library, something went terribly wrong with type casting or something else."));
+                // assert_eq!(rv.len(), $count >> 2);
+                rv
             }
         )*
     };
-    (@from_array [$arr_ty:ty; $cg:expr], [$($method:ident),* $(,)?], ($param:ident : $param_ty: ty) -> $ret: ty) => {
+    (@from_array [$arr_ty:ty; $count:ident], [$($method:ident),* $(,)?], ($param:ident : $param_ty: ty) -> $ret: ty) => {
         $(
             #[inline]
             fn $method($param: $param_ty) -> $ret {
-                [0 as $arr_ty; $cg]
+                let mut x: [$arr_ty; $count]
+                    = [0 as $arr_ty; $count];
+                assert_eq!($count, $param.len());
+                for c in 0..$count {
+                    x[c] = <$arr_ty>::$method(
+                        $param[c..(c+1)][0])
+                }
+                x
             }
         )*
     };
@@ -226,22 +243,6 @@ macro_rules! delegate {
         )*
     };
 }
-
-// macro_rules! delegate_array {
-//     ($ty:ty, [$($method:ident),* $(,)?], ($param:ident : $param_ty:ty) -> $ret:ty) => {
-//         delegate_array!(@inner $ty, [$($method),*], $param, $param_ty, $ret);
-//     };
-//     (@inner $ty:ty, [$($method:ident),*], $param:ident, $param_ty:ty, $ret:ty) => {
-//         $(
-//             #[inline]
-//             fn $method ($param: $param_ty) -> $ret {
-//                 self.iter().map(|x| x.to_le_bytes()).collect::<Vec<T>>().try_into().unwrap_or_else(|_|
-//                                 panic!("Unable to convert to_ne_bytes, this should not happen.")
-//                             )
-//             }
-//         )*
-//     };
-// }
 
 macro_rules! impl_primitives {
     ($($ty:ty),* $(,)?) => {
@@ -298,7 +299,7 @@ macro_rules! impl_primitives {
 
             impl <const N: usize, const SO: usize>
                 private::InternalAsRef<[u8]>
-            for [[$ty; SO]; N] 
+            for [[$ty; SO]; N]
             {
                 fn as_ref(&self) -> &[u8] {
                     use ::core::slice::from_raw_parts;
@@ -324,7 +325,6 @@ macro_rules! impl_primitives {
 
             impl Primitive for $ty {
                 type Buf = [u8; mem::size_of::<$ty>()];
-
                 delegate!(@simple $ty, [
                     to_ne_bytes,
                     to_le_bytes,
@@ -459,128 +459,3 @@ mod private {
     }
 
 }
-
-
-// It's better to leave T:Default because it will be more
-// flexible for future, have to look at this for example:
-// consider struct Foo(u32, u64); [Foo; N]; then Foo::default
-// is more natural in the future.
-
-// impl<T: Default, const N: usize>
-//     private::InternalDefault for [T; N]
-// {
-//     fn default() -> Self {
-//         let vec: Vec<T> = (0..N).map(|_| T::default()).collect();
-//         vec.try_into().unwrap_or_else(|_|
-//             panic!("Internal error in [T; N]default.\nThis should not happen unless we are out of memory."))
-//     }
-// }
-
-// impl <const N: usize> InternalAsRef<[u8]> for U8N<N> {
-//     fn as_ref<'a>(&'a self) -> &'a [u8] {
-//         // Safety: T and N are known at compile time.
-//         unsafe {
-//             ::core::slice::from_raw_parts(self.0.as_ptr() as *const u8, ::core::mem::size_of::<U8N<N>>())
-//         }
-//     }
-// }
-
-// impl <const N: usize> InternalAsMut<[u8]> for U8N<N> {
-//     fn as_mut(&mut self) -> &mut [u8] {
-//         unsafe {
-//             ::core::slice::from_raw_parts_mut(self.0.as_mut_ptr() as *mut u8,
-//             ::core::mem::size_of::<U8N<N>>())
-//         }
-//     }
-// }
-
-
-// struct U8N <const N: usize>([u8; N]);
-// impl<const M: usize, const N: usize> InternalDefault for U8N<M, N> {
-//     fn default() -> Self {
-//         Self([[0; M]; N])
-//     }
-// }
-
-// impl <T, const N: usize> Primitive for [T; N]
-// where T: Copy + Default + Primitive<Buf = [u8]> + Sized,
-// <T as Primitive>::Buf: Clone + Copy,
-// {
-//     type Buf = U8N<>;
-
-//     fn to_ne_bytes(self) -> Self::Buf {
-//         let rv: U8N<{mem::size_of::<T>()}, N> = InternalDefault::default();
-//         for k in 0..N {
-//             let x = self[k];
-//             rv.0[k] = x.to_ne_bytes();
-//         }
-//         self.iter().map(|x| x.to_ne_bytes()).collect::<Vec<T>>().try_into().unwrap_or_else(|_|
-//             panic!("Unable to convert to_ne_bytes, this should not happen.")
-//         )
-//     }
-
-//     fn to_le_bytes(self) -> Self::Buf {
-//         self.iter().map(|x| x.to_le_bytes()).collect::<Vec<T>>().try_into().unwrap_or_else(|_|
-//             panic!("Unable to convert to_ne_bytes, this should not happen.")
-//         )
-//     }
-
-//     fn to_be_bytes(self) -> Self::Buf {
-//         self.iter().map(|x| x.to_be_bytes()).collect::<Vec<T>>().try_into().unwrap_or_else(|_|
-//             panic!("Unable to convert to_ne_bytes, this should not happen.")
-//         )
-//     }
-
-//     fn from_ne_bytes(bytes: Self::Buf) -> Self
-//     {
-//         let mut array: [<T as Primitive>::Buf; N] =
-//             [<T as Primitive>::Buf::default(); N];
-//         let size: usize = ::core::mem::size_of::<T>();
-//         array.iter_mut().enumerate().map(|(i, x)| {
-//             let n = &bytes[i*size .. i*(size+1)];
-//             unsafe {
-//                 ::std::ptr::copy(n.as_ptr() as *const _, x, 1);
-//             }
-//             T::from_ne_bytes(*x)
-//         }).collect::<Vec<T>>().try_into().unwrap_or_else(|_| panic!("Never!"))
-//     }
-
-//     fn from_le_bytes(bytes: Self::Buf) -> Self {
-//         let mut array: [<T as Primitive>::Buf; N] =
-//             [<T as Primitive>::Buf::default(); N];
-//         let size: usize = ::core::mem::size_of::<T>();
-//         array.iter_mut().enumerate().map(|(i, x)| {
-//             let n = &bytes[i*size .. i*(size+1)];
-//             unsafe {
-//                 ::std::ptr::copy(n.as_ptr() as *const _, x, 1);
-//             }
-//             T::from_le_bytes(*x)
-//         }).collect::<Vec<T>>().try_into().unwrap_or_else(|_| panic!("Never!"))
-//     }
-
-//     fn from_be_bytes(bytes: Self::Buf) -> Self {
-//         let mut array: [<T as Primitive>::Buf; N] =
-//             [<T as Primitive>::Buf::default(); N];
-//         let size: usize = ::core::mem::size_of::<T>();
-//         array.iter_mut().enumerate().map(|(i, x)| {
-//             let n = &bytes[i*size .. i*(size+1)];
-//             unsafe {
-//                 ::std::ptr::copy(n.as_ptr() as *const _, x, 1);
-//             }
-//             T::from_be_bytes(*x)
-//         }).collect::<Vec<T>>().try_into().unwrap_or_else(|_| panic!("Never!"))
-//     }
-// }
-
-
-// impl <T, const N: usize> Io for [T; N]
-// where T: Copy + Default + Primitive + Sized,
-// {
-//     fn write<W: Write>(&self, w: W) -> Result<()> {
-//         todo!()
-//     }
-
-//     fn read<R: Read>(r: R) -> Result<Self> {
-//         todo!()
-//     }
-// }
