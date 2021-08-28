@@ -32,3 +32,7 @@ inline_primitives = []
 inline_io = []
 #C-like bool: 0 - false, else - true
 unchecked_bool = []
+
+[[test]]
+name="foo"
+path="tests/success/foo.rs"
