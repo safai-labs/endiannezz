@@ -20,8 +20,10 @@ where
             for field in &fields.named {
                 let accessor = access_named(field.ident.as_ref());
                 let attribute = endian::parse(&field.attrs)?;
-                if let Some(_skip) = attribute {
-                    continue;
+                if let Some(ref skip) = attribute {
+                    if skip == "_skip" {
+                        continue;
+                    }
                 }
                 let endian =
                     endian::choice(field.attrs.first(), attribute.as_ref(), default_endian)?;
@@ -33,8 +35,10 @@ where
             for (i, field) in fields.unnamed.iter().enumerate() {
                 let accessor = access_unnamed(i);
                 let attribute = endian::parse(&field.attrs)?;
-                if let Some(_skip) = attribute {
-                    continue;
+                if let Some(ref skip) = attribute {
+                    if skip == "_skip" {
+                        continue;
+                    }
                 }
                 let endian =
                     endian::choice(field.attrs.first(), attribute.as_ref(), default_endian)?;
@@ -64,9 +68,11 @@ pub fn read(fields: &Fields, default_endian: &Ident) -> Result<TokenStream> {
             for field in &fields.named {
                 let ident = field.ident.as_ref();
                 let attribute = endian::parse(&field.attrs)?;
-                if let Some(_skip) = attribute {
-                    derived.push(skip_field(ident));
-                    continue;
+                if let Some(ref skip) = attribute {
+                    if skip == "_skip" {
+                        derived.push(skip_field(ident));
+                        continue;
+                    }
                 }
                 let endian =
                     endian::choice(field.attrs.first(), attribute.as_ref(), default_endian)?;
@@ -79,9 +85,11 @@ pub fn read(fields: &Fields, default_endian: &Ident) -> Result<TokenStream> {
         Fields::Unnamed(fields) => {
             for field in &fields.unnamed {
                 let attribute = endian::parse(&field.attrs)?;
-                if let Some(_skip) = attribute {
-                    derived.push(skip_field(None));
-                    continue;
+                if let Some(ref skip) = attribute {
+                    if skip == "_skip" {
+                        derived.push(skip_field(None));
+                        continue;
+                    }
                 }
                 let endian =
                     endian::choice(field.attrs.first(), attribute.as_ref(), default_endian)?;
@@ -101,9 +109,12 @@ fn read_field(ty: &Type, endian: &Ident) -> TokenStream {
 }
 
 fn skip_field(name: Option<&Ident>) -> TokenStream {
-    if let Some(name) = name { 
+    // eprintln!("inside skip_field for {}", quote! { #name });
+    // this works because pretty much everything we have push
+    // will need a default value.
+
+    if let Some(name) = name {
         quote! {
-            // skipped field
             #name: Default::default()
         }
     } else {
