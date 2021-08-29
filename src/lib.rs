@@ -350,7 +350,6 @@ impl_primitives![
 /// Proxy for reading and writing primitive types
 pub trait Endian {
     fn write<T: Primitive, W: Write>(primitive: T, w: W) -> Result<()>;
-
     fn read<T: Primitive, R: Read>(r: R) -> Result<T>;
 }
 
@@ -376,6 +375,8 @@ macro_rules! impl_endianness {
         )*
     };
 }
+
+
 
 impl_endianness![
     NativeEndian to_ne_bytes from_ne_bytes,

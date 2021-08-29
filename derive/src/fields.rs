@@ -20,6 +20,9 @@ where
             for field in &fields.named {
                 let accessor = access_named(field.ident.as_ref());
                 let attribute = endian::parse(&field.attrs)?;
+                if let Some(_skip) = attribute {
+                    continue;
+                }
                 let endian =
                     endian::choice(field.attrs.first(), attribute.as_ref(), default_endian)?;
 
@@ -30,6 +33,9 @@ where
             for (i, field) in fields.unnamed.iter().enumerate() {
                 let accessor = access_unnamed(i);
                 let attribute = endian::parse(&field.attrs)?;
+                if let Some(_skip) = attribute {
+                    continue;
+                }
                 let endian =
                     endian::choice(field.attrs.first(), attribute.as_ref(), default_endian)?;
 
@@ -48,6 +54,8 @@ fn write_field(name: &TokenStream, endian: &Ident) -> TokenStream {
     }
 }
 
+
+
 pub fn read(fields: &Fields, default_endian: &Ident) -> Result<TokenStream> {
     let mut derived = Vec::new();
 
@@ -56,11 +64,14 @@ pub fn read(fields: &Fields, default_endian: &Ident) -> Result<TokenStream> {
             for field in &fields.named {
                 let ident = field.ident.as_ref();
                 let attribute = endian::parse(&field.attrs)?;
+                if let Some(_skip) = attribute {
+                    derived.push(skip_field(ident));
+                    continue;
+                }
                 let endian =
                     endian::choice(field.attrs.first(), attribute.as_ref(), default_endian)?;
 
                 let read = read_field(&field.ty, &endian);
-
                 derived.push(quote!(#ident: #read));
             }
             quote!({ #(#derived),* })
@@ -68,6 +79,10 @@ pub fn read(fields: &Fields, default_endian: &Ident) -> Result<TokenStream> {
         Fields::Unnamed(fields) => {
             for field in &fields.unnamed {
                 let attribute = endian::parse(&field.attrs)?;
+                if let Some(_skip) = attribute {
+                    derived.push(skip_field(None));
+                    continue;
+                }
                 let endian =
                     endian::choice(field.attrs.first(), attribute.as_ref(), default_endian)?;
 
@@ -82,6 +97,19 @@ pub fn read(fields: &Fields, default_endian: &Ident) -> Result<TokenStream> {
 fn read_field(ty: &Type, endian: &Ident) -> TokenStream {
     quote! {
         <#ty>::read_hacked::<::endiannezz::#endian, _>(&mut r)?
+    }
+}
+
+fn skip_field(name: Option<&Ident>) -> TokenStream {
+    if let Some(name) = name { 
+        quote! {
+            // skipped field
+            #name: Default::default()
+        }
+    } else {
+        quote! {
+            Default::default()
+        }
     }
 }
 

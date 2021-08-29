@@ -8,11 +8,13 @@ macro_rules! ident {
     };
 }
 
+
 fn determine_endian(ident: &Ident) -> Result<Ident> {
     match ident.to_string().as_str() {
         "_" | "ne" | "native" => Ok(ident!(NativeEndian)),
         "le" | "little" => Ok(ident!(LittleEndian)),
         "be" | "big" => Ok(ident!(BigEndian)),
+        "skip" | "ignore" => Ok(ident!(_skip)),
         _ => Err(Error::new_spanned(ident, "failed to determine endian")),
     }
 }
