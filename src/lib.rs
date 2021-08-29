@@ -19,7 +19,6 @@ Now it's possible to have traits that expand [`Read`] and [`Write`] with new met
 use endiannezz::ext::{EndianReader, EndianWriter};
 use endiannezz::{BigEndian, LittleEndian, NativeEndian};
 use std::io::Result;
-use crate::private::*;
 
 fn main() -> Result<()> {
     let mut vec = Vec::new();
@@ -85,15 +84,22 @@ impl Io for Bytes {
 // - NativeEndian: `_`, `ne`, `native`
 // - LittleEndian: `le`, `little`
 // - BigEndian: `be`, `big`
+// - Skip: `skip`, `ignore`
 struct Message {
     //will read/write data as is (according to implementation)
     bytes: Bytes,
+
     //u16 in little-endian
     distance: u16,
 
     //f32 in big-endian, you can override default endian!
     #[endian(big)]
     delta: f32,
+
+    //will be skipped while writing, and filled with Default::default()
+    //upon reading.
+    #[endian(skip)]
+    skipped_field: u16,
 
     //machine byte order
     #[endian(native)]
@@ -106,6 +112,7 @@ fn main() -> Result<()> {
         distance: 5,
         delta: 2.41,
         machine_data: 41,
+        skipped_field: 15, // this value is skipped
     };
 
     //writing message into Vec
