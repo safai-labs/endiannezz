@@ -30,6 +30,6 @@ pub trait HackedIo: Io {
 
 impl <T: Io> HackedIo for T{}
 
-impl <T: HackedIo, const N: usize> HackedIo for [T; N] 
+impl <T: HackedIo, const N: usize> HackedIo for [T; N]
 where [T; N]: HackedIo,
 {}
