@@ -28,7 +28,7 @@ where
                 let endian =
                     endian::choice(field.attrs.first(), attribute.as_ref(), default_endian)?;
 
-                derived.push(write_field(&accessor, &endian));
+                derived.push(write_field(&accessor, endian));
             }
         }
         Fields::Unnamed(fields) => {
@@ -43,7 +43,7 @@ where
                 let endian =
                     endian::choice(field.attrs.first(), attribute.as_ref(), default_endian)?;
 
-                derived.push(write_field(&accessor, &endian));
+                derived.push(write_field(&accessor, endian));
             }
         }
         Fields::Unit => {}
@@ -77,7 +77,7 @@ pub fn read(fields: &Fields, default_endian: &Ident) -> Result<TokenStream> {
                 let endian =
                     endian::choice(field.attrs.first(), attribute.as_ref(), default_endian)?;
 
-                let read = read_field(&field.ty, &endian);
+                let read = read_field(&field.ty, endian);
                 derived.push(quote!(#ident: #read));
             }
             quote!({ #(#derived),* })
@@ -94,7 +94,7 @@ pub fn read(fields: &Fields, default_endian: &Ident) -> Result<TokenStream> {
                 let endian =
                     endian::choice(field.attrs.first(), attribute.as_ref(), default_endian)?;
 
-                derived.push(read_field(&field.ty, &endian));
+                derived.push(read_field(&field.ty, endian));
             }
             quote!(( #(#derived),* ))
         }

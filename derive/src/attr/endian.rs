@@ -32,7 +32,7 @@ fn parse_endian_attr(attr: &Attribute) -> Result<Ident> {
         })
         .ok_or_else(|| Error::new_spanned(attr, "excepted endian identifier"))?;
 
-    Ok(determine_endian(ident)?)
+    determine_endian(ident)
 }
 
 pub fn parse(attrs: &[Attribute]) -> Result<Option<Ident>> {
