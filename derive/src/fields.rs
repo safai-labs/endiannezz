@@ -58,8 +58,6 @@ fn write_field(name: &TokenStream, endian: &Ident) -> TokenStream {
     }
 }
 
-
-
 pub fn read(fields: &Fields, default_endian: &Ident) -> Result<TokenStream> {
     let mut derived = Vec::new();
 

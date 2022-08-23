@@ -8,7 +8,6 @@ macro_rules! ident {
     };
 }
 
-
 fn determine_endian(ident: &Ident) -> Result<Ident> {
     match ident.to_string().as_str() {
         "_" | "ne" | "native" => Ok(ident!(NativeEndian)),

@@ -153,10 +153,10 @@ fn main() -> Result<()> {
 [`Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
 */
 
+use crate::private::*;
 use std::convert::TryInto;
 use std::io::{Error, ErrorKind, Read, Result, Write};
 use std::mem;
-use crate::private::*;
 
 #[cfg(feature = "derive")]
 #[doc(hidden)]
@@ -181,10 +181,7 @@ pub mod ext;
 /// and allows to read types from bytes or write them into bytes
 //noinspection RsSelfConvention
 pub trait Primitive: Sized + Copy {
-    type Buf:
-            private::InternalAsRef<[u8]>
-        +   private::InternalAsMut<[u8]>
-        +   private::InternalDefault;
+    type Buf: private::InternalAsRef<[u8]> + private::InternalAsMut<[u8]> + private::InternalDefault;
 
     fn to_ne_bytes(self) -> Self::Buf;
     fn to_le_bytes(self) -> Self::Buf;
@@ -258,7 +255,7 @@ macro_rules! impl_primitives {
                 }
             }
 
-            impl <const SO: usize> private::InternalAsMut<[u8]> for 
+            impl <const SO: usize> private::InternalAsMut<[u8]> for
                 [$ty; SO]
             {
                 fn as_mut<'a> (&'a mut self) -> &'a mut [u8] {
@@ -346,7 +343,6 @@ macro_rules! impl_primitives {
     };
 }
 
-
 #[rustfmt::skip]
 impl_primitives![
     i8, i16, i32, i64, i128, isize,
@@ -359,7 +355,6 @@ pub trait Endian {
     fn write<T: Primitive, W: Write>(primitive: T, w: W) -> Result<()>;
     fn read<T: Primitive, R: Read>(r: R) -> Result<T>;
 }
-
 
 macro_rules! impl_endianness {
     ($($endian:ident $write:ident $read:ident,)*) => {
@@ -382,8 +377,6 @@ macro_rules! impl_endianness {
         )*
     };
 }
-
-
 
 impl_endianness![
     NativeEndian to_ne_bytes from_ne_bytes,
@@ -422,12 +415,10 @@ impl Io for bool {
     }
 }
 
-
 pub trait HardcodedPayload: Default {
     type Buf: AsRef<[u8]> + AsMut<[u8]> + Default + PartialEq;
     const PAYLOAD: Self::Buf;
 }
-
 
 impl<T: HardcodedPayload> Io for T {
     #[cfg_attr(feature = "inline_primitives", inline)]
@@ -450,18 +441,23 @@ impl<T: HardcodedPayload> Io for T {
 
 mod private {
 
-    /// Really an internal 
+    /// Really an internal
     // Should we seal this trait?
     pub trait InternalDefault {
         fn default() -> Self;
     }
 
-    pub trait InternalAsMut<T> where T: ?Sized {
+    pub trait InternalAsMut<T>
+    where
+        T: ?Sized,
+    {
         fn as_mut(&mut self) -> &mut T;
     }
 
-    pub trait InternalAsRef<T> where T: ?Sized {
+    pub trait InternalAsRef<T>
+    where
+        T: ?Sized,
+    {
         fn as_ref(&self) -> &T;
     }
-
 }

@@ -1,5 +1,5 @@
 use crate::{Endian, Io, Primitive};
-use std::{io::{Read, Result, Write}};
+use std::io::{Read, Result, Write};
 
 pub trait HackedPrimitive: Primitive {
     #[cfg_attr(feature = "inline_primitives", inline)]
@@ -12,7 +12,6 @@ pub trait HackedPrimitive: Primitive {
         E::read(r)
     }
 }
-
 
 impl<T: Primitive> HackedPrimitive for T {}
 
@@ -28,8 +27,6 @@ pub trait HackedIo: Io {
     }
 }
 
-impl <T: Io> HackedIo for T{}
+impl<T: Io> HackedIo for T {}
 
-impl <T: HackedIo, const N: usize> HackedIo for [T; N]
-where [T; N]: HackedIo,
-{}
+impl<T: HackedIo, const N: usize> HackedIo for [T; N] where [T; N]: HackedIo {}
