@@ -449,15 +449,13 @@ mod private {
 
     pub trait InternalAsMut<T>
     where
-        T: ?Sized,
-    {
+        T: ?Sized, {
         fn as_mut(&mut self) -> &mut T;
     }
 
     pub trait InternalAsRef<T>
     where
-        T: ?Sized,
-    {
+        T: ?Sized, {
         fn as_ref(&self) -> &T;
     }
 }

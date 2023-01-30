@@ -11,8 +11,7 @@ pub fn write<Named, Unnamed>(
 ) -> Result<TokenStream>
 where
     Named: Fn(Option<&Ident>) -> TokenStream,
-    Unnamed: Fn(usize) -> TokenStream,
-{
+    Unnamed: Fn(usize) -> TokenStream, {
     let mut derived = Vec::new();
 
     match fields {
